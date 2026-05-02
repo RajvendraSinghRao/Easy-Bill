@@ -38,18 +38,10 @@ th,td { border:1px solid #ddd; padding:6px; text-align:center; }
   z-index:1000;
 }
 
-.print-popup button {
-  margin-top:10px;
-}
-
 @media print {
   .no-print, .print-popup { display:none !important; }
   table th:last-child, table td:last-child { display:none; }
-
-  body.thermal {
-    width:80mm;
-    margin:0;
-  }
+  body.thermal { width:80mm; margin:0; }
 }
 </style>
 </head>
@@ -58,7 +50,8 @@ th,td { border:1px solid #ddd; padding:6px; text-align:center; }
 
 <div class="header">
 <div id="shopTop"></div>
-<b>EASY BILL</b>
+<b>EASY BILL</b><br>
+<button onclick="changeShopName()" class="no-print">Change Shop Name</button>
 </div>
 
 <div class="container">
@@ -82,7 +75,7 @@ th,td { border:1px solid #ddd; padding:6px; text-align:center; }
 <div class="card">
 <table id="billTable">
 <tr>
-<th>Item</th><th>Qty</th><th>Price</th><th id="gstHead">GST</th><th>Total</th><th class="no-print">X</th>
+<th>Item</th><th>Weight</th><th>Qty</th><th>Price</th><th id="gstHead">GST</th><th>Total</th><th class="no-print">X</th>
 </tr>
 </table>
 
@@ -96,6 +89,7 @@ th,td { border:1px solid #ddd; padding:6px; text-align:center; }
 <h3>Add Material</h3>
 <input id="matName" placeholder="Material Name">
 <input id="matCompany" placeholder="Company (optional)">
+<input id="matWeight" placeholder="Weight (e.g. 50kg, 1 ton)">
 <input id="matPrice" type="number" placeholder="Price">
 <input id="matQty" type="number" placeholder="Quantity">
 <input id="matGST" type="number" placeholder="GST % (optional)">
@@ -127,6 +121,15 @@ if(!shop){
 }
 shopTop.innerText = shop;
 
+function changeShopName(){
+  let n = prompt("Enter new Shop Name:", shop);
+  if(n){
+    shop = n;
+    localStorage.setItem("shop", n);
+    shopTop.innerText = n;
+  }
+}
+
 // MOBILE
 custMob.addEventListener("input", function(){
   let v=this.value.replace(/\D/g,'');
@@ -147,11 +150,11 @@ function loadMaterials(list = materials){
   list.forEach((m,i)=>{
     let opt=document.createElement("option");
     opt.value=i;
-    opt.text=`${m.name}${m.company?" - "+m.company:""} ₹${m.price}`;
+    opt.text=`${m.name}${m.company?" - "+m.company:""} ${m.weight?"("+m.weight+")":""} ₹${m.price}`;
     material.appendChild(opt);
 
     let d=document.createElement("div");
-    d.innerHTML=`${m.name} ₹${m.price}
+    d.innerHTML=`${m.name} ${m.weight||""} ₹${m.price}
     <button onclick="deleteMaterial(${i})">Delete</button>`;
     matList.appendChild(d);
   });
@@ -171,16 +174,17 @@ searchMat.addEventListener("input", function(){
 function addMaterial(){
   let name=matName.value.trim();
   let company=matCompany.value.trim();
+  let weight=matWeight.value.trim();
   let price=parseFloat(matPrice.value);
   let qty=parseFloat(matQty.value)||0;
   let gst=parseFloat(matGST.value)||0;
 
   if(!name || isNaN(price)) return alert("Enter valid data");
 
-  materials.push({name,company,price,qty,gst});
+  materials.push({name,company,weight,price,qty,gst});
   loadMaterials();
 
-  matName.value=matCompany.value=matPrice.value=matQty.value=matGST.value="";
+  matName.value=matCompany.value=matWeight.value=matPrice.value=matQty.value=matGST.value="";
 }
 
 // DELETE
@@ -189,15 +193,15 @@ function deleteMaterial(i){
   loadMaterials();
 }
 
-// ADD ITEM (NO NaN NOW)
+// ADD ITEM
 function addItem(){
   let m = materials[material.value];
   let q = Number(qty.value);
 
   if(!m || q<=0 || isNaN(q)) return alert("Enter valid quantity");
 
-  let price = Number(m.price) || 0;
-  let gst = Number(m.gst) || 0;
+  let price = Number(m.price)||0;
+  let gst = Number(m.gst)||0;
 
   let base = q * price;
   let gstAmt = base * (gst/100);
@@ -209,12 +213,13 @@ function addItem(){
 
   let r=billTable.insertRow();
   r.insertCell(0).innerText=m.name;
-  r.insertCell(1).innerText=q;
-  r.insertCell(2).innerText=price;
-  r.insertCell(3).innerText=gst>0?gst+"%":"";
-  r.insertCell(4).innerText=t.toFixed(2);
+  r.insertCell(1).innerText=m.weight||"-";
+  r.insertCell(2).innerText=q;
+  r.insertCell(3).innerText=price;
+  r.insertCell(4).innerText=gst>0?gst+"%":"";
+  r.insertCell(5).innerText=t.toFixed(2);
 
-  let del=r.insertCell(5);
+  let del=r.insertCell(6);
   del.innerHTML=`<button onclick="removeRow(this,${t})">X</button>`;
 
   updateGSTColumn();
@@ -225,7 +230,7 @@ function addItem(){
 
 // GST COLUMN
 function updateGSTColumn(){
-  let col=3;
+  let col=4;
   for(let r of billTable.rows){
     if(!hasGST){
       if(r.cells[col]) r.cells[col].style.display="none";
@@ -257,7 +262,7 @@ function clearBill(){
   location.reload();
 }
 
-// PRINT UI
+// PRINT
 function openPrint(){ printBox.style.display="block"; }
 function closePrint(){ printBox.style.display="none"; }
 
