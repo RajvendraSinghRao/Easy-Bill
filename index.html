@@ -5,79 +5,31 @@
 <title>EASY BILL</title>
 
 <style>
-body {
-  font-family: 'Segoe UI', sans-serif;
-  margin: 0;
-  background: #eef2f7;
-}
-
-.header {
-  background: #0d6efd;
-  color: white;
-  text-align: center;
-  padding: 15px;
-}
-
-.container {
-  padding: 10px;
-  max-width: 600px;
-  margin: auto;
-}
+body { font-family: Arial; margin:0; background:#eef2f7; }
+.header { background:#0d6efd; color:white; text-align:center; padding:15px; }
+.container { max-width:600px; margin:auto; padding:10px; }
 
 .card {
-  background: white;
-  padding: 12px;
-  margin-bottom: 12px;
-  border-radius: 12px;
-  box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+  background:white; padding:12px; margin-bottom:10px;
+  border-radius:10px; box-shadow:0 2px 6px rgba(0,0,0,0.1);
 }
 
 input, select, button {
-  width: 100%;
-  padding: 10px;
-  margin: 5px 0;
-  border-radius: 8px;
-  border: 1px solid #ccc;
+  width:100%; padding:10px; margin:5px 0;
+  border-radius:6px; border:1px solid #ccc;
 }
 
-button {
-  background: #0d6efd;
-  color: white;
-  border: none;
-}
+button { background:#0d6efd; color:white; border:none; }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 10px;
-}
+table { width:100%; border-collapse:collapse; margin-top:10px; }
+th,td { border:1px solid #ddd; padding:6px; text-align:center; }
 
-th, td {
-  border: 1px solid #ddd;
-  padding: 6px;
-  text-align: center;
-  font-size: 13px;
-}
-
-.no-print { display: block; }
+.no-print { display:block; }
 
 @media print {
-  .no-print { display: none !important; }
-
-  table th:last-child,
-  table td:last-child {
-    display: none;
-  }
-
-  body.thermal {
-    width: 80mm;
-    margin: 0;
-  }
-
-  body.thermal .container {
-    max-width: 100%;
-    padding: 0;
-  }
+  .no-print { display:none !important; }
+  table th:last-child, table td:last-child { display:none; }
+  body.thermal { width:80mm; margin:0; }
 }
 </style>
 </head>
@@ -87,7 +39,7 @@ th, td {
 <div class="header">
 <div id="shopTop"></div>
 <b>EASY BILL</b><br>
-<button onclick="changeShopName()" class="no-print">Change Shop Name</button>
+<button onclick="changeShopName()" class="no-print">Change Shop</button>
 </div>
 
 <div class="container">
@@ -98,7 +50,7 @@ th, td {
 
 <div class="card no-print">
 <input id="custName" placeholder="Customer Name (optional)">
-<input id="custMob" placeholder="+91 Mobile Number">
+<input id="custMob" placeholder="+91 Mobile (optional)">
 </div>
 
 <div class="card no-print">
@@ -110,21 +62,11 @@ th, td {
 <div class="card">
 <table id="billTable">
 <tr>
-<th>Item</th>
-<th>Qty</th>
-<th>Price</th>
-<th>GST</th>
-<th>Total</th>
-<th class="no-print">X</th>
+<th>Item</th><th>Qty</th><th>Price</th><th id="gstHead">GST</th><th>Total</th><th class="no-print">X</th>
 </tr>
 </table>
 
 <h3 id="grandTotal">Total: ₹0</h3>
-
-<div class="no-print">
-<label><input type="radio" name="printType" value="normal" checked> Normal</label>
-<label><input type="radio" name="printType" value="thermal"> Thermal</label>
-</div>
 
 <button class="no-print" onclick="handlePrint()">Print</button>
 <button class="no-print" onclick="clearBill()">New Bill</button>
@@ -135,12 +77,13 @@ th, td {
 <input id="matName" placeholder="Material Name">
 <input id="matCompany" placeholder="Company (optional)">
 <input id="matPrice" type="number" placeholder="Price">
+<input id="matQty" type="number" placeholder="Quantity">
 <input id="matGST" type="number" placeholder="GST % (optional)">
-<button onclick="addMaterial()">Add Material</button>
+<button onclick="addMaterial()">Add</button>
 </div>
 
 <div class="card no-print">
-<h3>Manage Materials</h3>
+<h3>Materials</h3>
 <div id="matList"></div>
 </div>
 
@@ -148,53 +91,50 @@ th, td {
 
 <script>
 
-// SHOP NAME
+// SHOP
 let shop = localStorage.getItem("shop");
 if(!shop){
-  shop = prompt("Enter your Shop Name:");
-  if(!shop) shop = "My Shop";
-  localStorage.setItem("shop", shop);
+  shop = prompt("Enter Shop Name:");
+  localStorage.setItem("shop", shop || "My Shop");
 }
 shopTop.innerText = shop;
 
 function changeShopName(){
-  let newName = prompt("Enter new Shop Name:", shop);
-  if(newName){
-    shop = newName;
-    localStorage.setItem("shop", shop);
-    shopTop.innerText = shop;
+  let n = prompt("New Shop Name:", shop);
+  if(n){
+    shop = n;
+    localStorage.setItem("shop", n);
+    shopTop.innerText = n;
   }
 }
 
-// MOBILE +91
+// MOBILE OPTIONAL
 custMob.addEventListener("input", function(){
-  let val = this.value.replace(/\D/g,'');
-  if(!val.startsWith("91")) val = "91"+val;
-  val = val.substring(0,12);
-  this.value = "+" + val;
+  let v = this.value.replace(/\D/g,'');
+  if(v && !v.startsWith("91")) v="91"+v;
+  this.value = v ? "+"+v.substring(0,12) : "";
 });
 
-// MATERIALS
-let materials = JSON.parse(localStorage.getItem("materials")) || [
-  {name:"Cement", price:350, gst:18}
-];
-
+// DATA
+let materials = JSON.parse(localStorage.getItem("materials")) || [];
 let total = 0;
+let hasGST = false;
 
+// LOAD MATERIALS
 function loadMaterials(){
-  material.innerHTML = "";
-  matList.innerHTML = "";
+  material.innerHTML="";
+  matList.innerHTML="";
 
   materials.forEach((m,i)=>{
-    let opt = document.createElement("option");
-    opt.value = i;
-    opt.text = `${m.name} (₹${m.price})`;
+    let opt=document.createElement("option");
+    opt.value=i;
+    opt.text=`${m.name}${m.company ? " - "+m.company : ""} ₹${m.price}`;
     material.appendChild(opt);
 
-    let div = document.createElement("div");
-    div.innerHTML = `${m.name} - ₹${m.price} (${m.gst||0}% GST)
+    let d=document.createElement("div");
+    d.innerHTML=`${m.name}${m.company ? " - "+m.company : ""} ₹${m.price} (${m.gst||0}%)
     <button onclick="deleteMaterial(${i})">Delete</button>`;
-    matList.appendChild(div);
+    matList.appendChild(d);
   });
 
   localStorage.setItem("materials", JSON.stringify(materials));
@@ -203,25 +143,24 @@ loadMaterials();
 
 // ADD MATERIAL
 function addMaterial(){
-  let name = matName.value.trim();
-  let price = parseFloat(matPrice.value);
-  let gst = parseFloat(matGST.value) || 0;
+  let name=matName.value.trim();
+  let company=matCompany.value.trim();
+  let price=parseFloat(matPrice.value);
+  let qty=parseFloat(matQty.value) || 0;
+  let gst=parseFloat(matGST.value) || 0;
 
-  if(!name || !price){
-    alert("Enter material and price");
+  if(!name || isNaN(price)){
+    alert("Enter valid name & price");
     return;
   }
 
-  materials.push({name, price, gst});
+  materials.push({name,company,price,qty,gst});
   loadMaterials();
 
-  matName.value="";
-  matCompany.value="";
-  matPrice.value="";
-  matGST.value="";
+  matName.value=matCompany.value=matPrice.value=matQty.value=matGST.value="";
 }
 
-// DELETE MATERIAL
+// DELETE
 function deleteMaterial(i){
   materials.splice(i,1);
   loadMaterials();
@@ -229,73 +168,79 @@ function deleteMaterial(i){
 
 // ADD ITEM
 function addItem(){
-  let m = materials[material.value];
-  let q = parseFloat(qty.value);
+  let m=materials[material.value];
+  let q=parseFloat(qty.value);
 
-  if(!q){
-    alert("Enter quantity");
+  if(!m || isNaN(q)){
+    alert("Enter valid quantity");
     return;
   }
 
-  let base = q * m.price;
-  let gstAmt = base * (m.gst/100);
-  let t = base + gstAmt;
+  let base=q*m.price;
+  let gstAmt=base*(m.gst/100);
+  let t=base+gstAmt;
 
-  total += t;
+  if(m.gst>0) hasGST=true;
 
-  let row = billTable.insertRow();
-  row.insertCell(0).innerText = m.name;
-  row.insertCell(1).innerText = q;
-  row.insertCell(2).innerText = m.price;
-  row.insertCell(3).innerText = m.gst + "%";
-  row.insertCell(4).innerText = t.toFixed(2);
+  total+=t;
 
-  let del = row.insertCell(5);
-  del.innerHTML = `<button onclick="removeRow(this,${t})">X</button>`;
+  let r=billTable.insertRow();
+  r.insertCell(0).innerText=m.name;
+  r.insertCell(1).innerText=q;
+  r.insertCell(2).innerText=m.price;
 
-  grandTotal.innerText = "Total: ₹" + total.toFixed(2);
+  let gstCell=r.insertCell(3);
+  gstCell.innerText=m.gst>0 ? m.gst+"%" : "";
+
+  r.insertCell(4).innerText=t.toFixed(2);
+
+  let del=r.insertCell(5);
+  del.innerHTML=`<button onclick="removeRow(this,${t})">X</button>`;
+
+  updateGSTColumn();
+  grandTotal.innerText="Total: ₹"+total.toFixed(2);
 
   showCustomer();
 }
 
-// REMOVE ITEM
+// GST COLUMN CONTROL
+function updateGSTColumn(){
+  let col=3;
+  for(let r of billTable.rows){
+    if(!hasGST){
+      if(r.cells[col]) r.cells[col].style.display="none";
+    } else {
+      if(r.cells[col]) r.cells[col].style.display="";
+    }
+  }
+}
+
+// REMOVE
 function removeRow(btn,val){
   btn.parentElement.parentElement.remove();
-  total -= val;
-  grandTotal.innerText = "Total: ₹" + total.toFixed(2);
+  total-=val;
+  grandTotal.innerText="Total: ₹"+total.toFixed(2);
 }
 
 // CUSTOMER
 function showCustomer(){
-  let name = custName.value.trim();
-  let mob = custMob.value.replace(/\D/g,'');
+  let n=custName.value.trim();
+  let m=custMob.value.replace(/\D/g,'');
 
-  let mobileText = "";
-  if(mob.length === 12){
-    mobileText = "Mobile: +" + mob;
-  }
-
-  custDisplay.innerHTML = `
-    ${name ? "Name: "+name+"<br>" : ""}
-    ${mobileText}
-  `;
+  custDisplay.innerHTML=
+    (n?"Name: "+n+"<br>":"")+
+    (m.length===12?"Mobile: +"+m:"");
 }
 
 // CLEAR
 function clearBill(){
-  billTable.innerHTML = `
-  <tr>
-  <th>Item</th><th>Qty</th><th>Price</th><th>GST</th><th>Total</th><th class="no-print">X</th>
-  </tr>`;
-  total = 0;
-  grandTotal.innerText = "Total: ₹0";
-  custDisplay.innerHTML="";
+  location.reload();
 }
 
-// PRINT MODE
+// PRINT
 function handlePrint(){
-  let type = document.querySelector('input[name="printType"]:checked').value;
-  if(type === "thermal"){
+  let type=prompt("Type 'thermal' or 'normal':");
+  if(type && type.toLowerCase()==="thermal"){
     document.body.classList.add("thermal");
   } else {
     document.body.classList.remove("thermal");
