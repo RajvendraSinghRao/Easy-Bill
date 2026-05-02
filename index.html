@@ -19,17 +19,37 @@ input, select, button {
   border-radius:6px; border:1px solid #ccc;
 }
 
-button { background:#0d6efd; color:white; border:none; }
+button { background:#0d6efd; color:white; border:none; cursor:pointer; }
 
 table { width:100%; border-collapse:collapse; margin-top:10px; }
 th,td { border:1px solid #ddd; padding:6px; text-align:center; }
 
 .no-print { display:block; }
 
+.print-popup {
+  display:none;
+  position:fixed;
+  top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  background:white;
+  padding:20px;
+  border-radius:10px;
+  box-shadow:0 0 10px rgba(0,0,0,0.3);
+  z-index:1000;
+}
+
+.print-popup button {
+  margin-top:10px;
+}
+
 @media print {
-  .no-print { display:none !important; }
+  .no-print, .print-popup { display:none !important; }
   table th:last-child, table td:last-child { display:none; }
-  body.thermal { width:80mm; margin:0; }
+
+  body.thermal {
+    width:80mm;
+    margin:0;
+  }
 }
 </style>
 </head>
@@ -38,8 +58,7 @@ th,td { border:1px solid #ddd; padding:6px; text-align:center; }
 
 <div class="header">
 <div id="shopTop"></div>
-<b>EASY BILL</b><br>
-<button onclick="changeShopName()" class="no-print">Change Shop</button>
+<b>EASY BILL</b>
 </div>
 
 <div class="container">
@@ -54,6 +73,7 @@ th,td { border:1px solid #ddd; padding:6px; text-align:center; }
 </div>
 
 <div class="card no-print">
+<input id="searchMat" placeholder="Search Material">
 <select id="material"></select>
 <input id="qty" type="number" placeholder="Quantity">
 <button onclick="addItem()">Add Item</button>
@@ -68,7 +88,7 @@ th,td { border:1px solid #ddd; padding:6px; text-align:center; }
 
 <h3 id="grandTotal">Total: ₹0</h3>
 
-<button class="no-print" onclick="handlePrint()">Print</button>
+<button class="no-print" onclick="openPrint()">Print</button>
 <button class="no-print" onclick="clearBill()">New Bill</button>
 </div>
 
@@ -89,6 +109,14 @@ th,td { border:1px solid #ddd; padding:6px; text-align:center; }
 
 </div>
 
+<!-- PRINT POPUP -->
+<div class="print-popup" id="printBox">
+<h3>Select Print Type</h3>
+<button onclick="doPrint('normal')">Normal (A4)</button>
+<button onclick="doPrint('thermal')">Thermal</button>
+<button onclick="closePrint()">Cancel</button>
+</div>
+
 <script>
 
 // SHOP
@@ -99,18 +127,9 @@ if(!shop){
 }
 shopTop.innerText = shop;
 
-function changeShopName(){
-  let n = prompt("New Shop Name:", shop);
-  if(n){
-    shop = n;
-    localStorage.setItem("shop", n);
-    shopTop.innerText = n;
-  }
-}
-
-// MOBILE OPTIONAL
+// MOBILE
 custMob.addEventListener("input", function(){
-  let v = this.value.replace(/\D/g,'');
+  let v=this.value.replace(/\D/g,'');
   if(v && !v.startsWith("91")) v="91"+v;
   this.value = v ? "+"+v.substring(0,12) : "";
 });
@@ -121,18 +140,18 @@ let total = 0;
 let hasGST = false;
 
 // LOAD MATERIALS
-function loadMaterials(){
+function loadMaterials(list = materials){
   material.innerHTML="";
   matList.innerHTML="";
 
-  materials.forEach((m,i)=>{
+  list.forEach((m,i)=>{
     let opt=document.createElement("option");
     opt.value=i;
-    opt.text=`${m.name}${m.company ? " - "+m.company : ""} ₹${m.price}`;
+    opt.text=`${m.name}${m.company?" - "+m.company:""} ₹${m.price}`;
     material.appendChild(opt);
 
     let d=document.createElement("div");
-    d.innerHTML=`${m.name}${m.company ? " - "+m.company : ""} ₹${m.price} (${m.gst||0}%)
+    d.innerHTML=`${m.name} ₹${m.price}
     <button onclick="deleteMaterial(${i})">Delete</button>`;
     matList.appendChild(d);
   });
@@ -141,18 +160,22 @@ function loadMaterials(){
 }
 loadMaterials();
 
+// SEARCH
+searchMat.addEventListener("input", function(){
+  let val=this.value.toLowerCase();
+  let filtered = materials.filter(m=>m.name.toLowerCase().includes(val));
+  loadMaterials(filtered);
+});
+
 // ADD MATERIAL
 function addMaterial(){
   let name=matName.value.trim();
   let company=matCompany.value.trim();
   let price=parseFloat(matPrice.value);
-  let qty=parseFloat(matQty.value) || 0;
-  let gst=parseFloat(matGST.value) || 0;
+  let qty=parseFloat(matQty.value)||0;
+  let gst=parseFloat(matGST.value)||0;
 
-  if(!name || isNaN(price)){
-    alert("Enter valid name & price");
-    return;
-  }
+  if(!name || isNaN(price)) return alert("Enter valid data");
 
   materials.push({name,company,price,qty,gst});
   loadMaterials();
@@ -166,32 +189,29 @@ function deleteMaterial(i){
   loadMaterials();
 }
 
-// ADD ITEM
+// ADD ITEM (NO NaN NOW)
 function addItem(){
-  let m=materials[material.value];
-  let q=parseFloat(qty.value);
+  let m = materials[material.value];
+  let q = Number(qty.value);
 
-  if(!m || isNaN(q)){
-    alert("Enter valid quantity");
-    return;
-  }
+  if(!m || q<=0 || isNaN(q)) return alert("Enter valid quantity");
 
-  let base=q*m.price;
-  let gstAmt=base*(m.gst/100);
-  let t=base+gstAmt;
+  let price = Number(m.price) || 0;
+  let gst = Number(m.gst) || 0;
 
-  if(m.gst>0) hasGST=true;
+  let base = q * price;
+  let gstAmt = base * (gst/100);
+  let t = base + gstAmt;
 
-  total+=t;
+  if(gst>0) hasGST=true;
+
+  total += t;
 
   let r=billTable.insertRow();
   r.insertCell(0).innerText=m.name;
   r.insertCell(1).innerText=q;
-  r.insertCell(2).innerText=m.price;
-
-  let gstCell=r.insertCell(3);
-  gstCell.innerText=m.gst>0 ? m.gst+"%" : "";
-
+  r.insertCell(2).innerText=price;
+  r.insertCell(3).innerText=gst>0?gst+"%":"";
   r.insertCell(4).innerText=t.toFixed(2);
 
   let del=r.insertCell(5);
@@ -203,7 +223,7 @@ function addItem(){
   showCustomer();
 }
 
-// GST COLUMN CONTROL
+// GST COLUMN
 function updateGSTColumn(){
   let col=3;
   for(let r of billTable.rows){
@@ -237,14 +257,17 @@ function clearBill(){
   location.reload();
 }
 
-// PRINT
-function handlePrint(){
-  let type=prompt("Type 'thermal' or 'normal':");
-  if(type && type.toLowerCase()==="thermal"){
+// PRINT UI
+function openPrint(){ printBox.style.display="block"; }
+function closePrint(){ printBox.style.display="none"; }
+
+function doPrint(type){
+  if(type==="thermal"){
     document.body.classList.add("thermal");
   } else {
     document.body.classList.remove("thermal");
   }
+  printBox.style.display="none";
   window.print();
 }
 
