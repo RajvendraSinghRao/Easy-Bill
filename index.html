@@ -18,10 +18,6 @@ body {
   padding: 15px;
 }
 
-.header button {
-  margin-top: 5px;
-}
-
 .container {
   padding: 10px;
   max-width: 600px;
@@ -51,10 +47,6 @@ button {
   border: none;
 }
 
-button:active {
-  transform: scale(0.97);
-}
-
 table {
   width: 100%;
   border-collapse: collapse;
@@ -71,8 +63,14 @@ th, td {
 .no-print { display: block; }
 
 @media print {
-  .no-print { display: none; }
+  .no-print { display: none !important; }
   body { background: white; }
+
+  /* Hide remove column */
+  table th:last-child,
+  table td:last-child {
+    display: none;
+  }
 }
 </style>
 
@@ -90,14 +88,13 @@ th, td {
 
 <div class="card">
 <h2 id="shopBill" style="text-align:center;"></h2>
-<h3 style="text-align:center;">EASY BILL</h3>
 <hr>
 <div id="custDisplay"></div>
 </div>
 
 <div class="card no-print">
 <input id="custName" placeholder="Customer Name (optional)">
-<input id="custMob" placeholder="Mobile Number (optional)">
+<input id="custMob" placeholder="+91 Mobile Number">
 </div>
 
 <div class="card no-print">
@@ -143,7 +140,6 @@ th, td {
 
 // SHOP NAME
 let shop = localStorage.getItem("shop");
-
 if(!shop){
   shop = prompt("Enter your Shop Name:");
   if(!shop) shop = "My Shop";
@@ -166,14 +162,25 @@ function changeShopName(){
 
 updateShop();
 
+// MOBILE FORMAT (+91)
+custMob.addEventListener("input", function(){
+  let val = this.value.replace(/\D/g,'');
+
+  if(!val.startsWith("91")){
+    val = "91" + val;
+  }
+
+  val = val.substring(0,12);
+  this.value = "+" + val;
+});
+
 // MATERIALS
 let materials = JSON.parse(localStorage.getItem("materials")) || [
-  {name:"Cement", company:"UltraTech", price:350, qty:100}
+  {name:"Cement", company:"UltraTech", price:350}
 ];
 
 let total = 0;
 
-// LOAD MATERIALS
 function loadMaterials(){
   material.innerHTML = "";
   matList.innerHTML = "";
@@ -185,10 +192,8 @@ function loadMaterials(){
     material.appendChild(opt);
 
     let div = document.createElement("div");
-    div.innerHTML = `
-      ${m.name} - ₹${m.price}
-      <button onclick="deleteMaterial(${i})">Delete</button>
-    `;
+    div.innerHTML = `${m.name} - ₹${m.price} 
+    <button onclick="deleteMaterial(${i})">Delete</button>`;
     matList.appendChild(div);
   });
 
@@ -197,19 +202,17 @@ function loadMaterials(){
 
 loadMaterials();
 
-// ADD MATERIAL
 function addMaterial(){
   let name = matName.value.trim();
   let company = matCompany.value.trim();
   let price = parseFloat(matPrice.value);
-  let qty = matQty.value;
 
   if(!name || !price){
     alert("Enter material and price");
     return;
   }
 
-  materials.push({name, company, price, qty});
+  materials.push({name, company, price});
   loadMaterials();
 
   matName.value="";
@@ -218,13 +221,11 @@ function addMaterial(){
   matQty.value="";
 }
 
-// DELETE MATERIAL
 function deleteMaterial(i){
   materials.splice(i,1);
   loadMaterials();
 }
 
-// ADD ITEM
 function addItem(){
   let m = materials[material.value];
   let q = parseFloat(qty.value);
@@ -251,25 +252,28 @@ function addItem(){
   showCustomer();
 }
 
-// REMOVE ITEM
 function removeRow(btn,val){
   btn.parentElement.parentElement.remove();
   total -= val;
   grandTotal.innerText = "Total: ₹" + total;
 }
 
-// CUSTOMER DISPLAY
 function showCustomer(){
-  let name = custName.value;
-  let mob = custMob.value;
+  let name = custName.value.trim();
+  let mob = custMob.value.replace(/\D/g,'');
+
+  let mobileText = "";
+
+  if(mob.length === 12){
+    mobileText = "Mobile: +" + mob;
+  }
 
   custDisplay.innerHTML = `
     ${name ? "Name: "+name+"<br>" : ""}
-    ${mob ? "Mobile: "+mob : ""}
+    ${mobileText}
   `;
 }
 
-// CLEAR BILL
 function clearBill(){
   billTable.innerHTML = `
   <tr>
