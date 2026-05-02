@@ -6,47 +6,53 @@
 
 <style>
 body {
-  font-family: Arial;
+  font-family: 'Segoe UI', sans-serif;
   margin: 0;
   background: #eef2f7;
 }
 
 .header {
-  background: #007bff;
+  background: #0d6efd;
   color: white;
-  padding: 15px;
   text-align: center;
+  padding: 15px;
+}
+
+.header button {
+  margin-top: 5px;
 }
 
 .container {
-  padding: 15px;
-  max-width: 1000px;
+  padding: 10px;
+  max-width: 600px;
   margin: auto;
 }
 
 .card {
   background: white;
-  padding: 15px;
-  margin-bottom: 15px;
-  border-radius: 10px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  padding: 12px;
+  margin-bottom: 12px;
+  border-radius: 12px;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.1);
 }
 
 input, select, button {
-  padding: 8px;
-  margin: 5px;
+  width: 100%;
+  padding: 10px;
+  margin: 5px 0;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 14px;
 }
 
 button {
-  background: #007bff;
+  background: #0d6efd;
   color: white;
   border: none;
-  cursor: pointer;
-  border-radius: 5px;
 }
 
-button:hover {
-  background: #0056b3;
+button:active {
+  transform: scale(0.97);
 }
 
 table {
@@ -57,32 +63,16 @@ table {
 
 th, td {
   border: 1px solid #ddd;
-  padding: 8px;
+  padding: 6px;
   text-align: center;
+  font-size: 13px;
 }
 
-.flex {
-  display: flex;
-  flex-wrap: wrap;
-}
+.no-print { display: block; }
 
-.flex input, .flex select {
-  flex: 1;
-  min-width: 150px;
-}
-
-.no-print {
-  display: block;
-}
-
-/* PRINT */
 @media print {
-  .no-print {
-    display: none;
-  }
-  body {
-    background: white;
-  }
+  .no-print { display: none; }
+  body { background: white; }
 }
 </style>
 
@@ -90,108 +80,119 @@ th, td {
 
 <body>
 
-<div class="header no-print">
-<h2 id="shopNameTop">EASY BILL</h2>
-<button onclick="changeShopName()">Change Shop Name</button>
+<div class="header">
+<div id="shopTop"></div>
+<b>EASY BILL</b><br>
+<button onclick="changeShopName()" class="no-print">Change Shop Name</button>
 </div>
 
 <div class="container">
 
-<!-- BILL HEADER -->
 <div class="card">
-<h2 id="shopNameBill" style="text-align:center;"></h2>
+<h2 id="shopBill" style="text-align:center;"></h2>
 <h3 style="text-align:center;">EASY BILL</h3>
+<hr>
+<div id="custDisplay"></div>
 </div>
 
-<!-- CUSTOMER -->
 <div class="card no-print">
-<input id="custName" placeholder="Customer Name">
-<input id="custMob" placeholder="Mobile Number">
+<input id="custName" placeholder="Customer Name (optional)">
+<input id="custMob" placeholder="Mobile Number (optional)">
 </div>
 
-<!-- ADD ITEM -->
 <div class="card no-print">
-<div class="flex">
 <select id="material"></select>
 <input id="qty" type="number" placeholder="Quantity">
-<button onclick="addItem()">Add</button>
-</div>
+<button onclick="addItem()">Add Item</button>
 </div>
 
-<!-- BILL -->
 <div class="card">
 <table id="billTable">
 <tr>
-<th>Material</th>
+<th>Item</th>
 <th>Qty</th>
 <th>Price</th>
 <th>Total</th>
+<th class="no-print">X</th>
 </tr>
 </table>
 
 <h3 id="grandTotal">Total: ₹0</h3>
 
-<button class="no-print" onclick="window.print()">🖨 Print</button>
+<button class="no-print" onclick="window.print()">Print</button>
 <button class="no-print" onclick="clearBill()">New Bill</button>
 </div>
 
-<!-- ADD MATERIAL -->
 <div class="card no-print">
 <h3>Add Material</h3>
-
 <input id="matName" placeholder="Material Name">
-<input id="matCompany" placeholder="Company (Optional)">
+<input id="matCompany" placeholder="Company (optional)">
 <input id="matPrice" type="number" placeholder="Price">
+<input id="matQty" type="number" placeholder="Quantity (optional)">
+<button onclick="addMaterial()">Add Material</button>
+</div>
 
-<button onclick="addMaterial()">Add</button>
+<div class="card no-print">
+<h3>Manage Materials</h3>
+<div id="matList"></div>
 </div>
 
 </div>
 
 <script>
 
-// SHOP NAME SYSTEM
-let shopName = localStorage.getItem("shopName");
+// SHOP NAME
+let shop = localStorage.getItem("shop");
 
-if(!shopName){
-  shopName = prompt("Enter your Shop Name:");
-  localStorage.setItem("shopName", shopName);
+if(!shop){
+  shop = prompt("Enter your Shop Name:");
+  if(!shop) shop = "My Shop";
+  localStorage.setItem("shop", shop);
 }
 
-document.getElementById("shopNameTop").innerText = shopName;
-document.getElementById("shopNameBill").innerText = shopName;
+function updateShop(){
+  shopTop.innerText = shop;
+  shopBill.innerText = shop;
+}
 
 function changeShopName(){
-  let newName = prompt("Enter new Shop Name:");
+  let newName = prompt("Enter new Shop Name:", shop);
   if(newName){
-    localStorage.setItem("shopName", newName);
-    location.reload();
+    shop = newName;
+    localStorage.setItem("shop", shop);
+    updateShop();
   }
 }
 
-// MATERIALS
-let defaultMaterials = [
-  {name:"Cement", company:"UltraTech", price:350},
-  {name:"Sand", company:"", price:5000},
-  {name:"Aggregate", company:"", price:4000},
-  {name:"Steel", company:"TATA", price:70}
-];
+updateShop();
 
-let materials = JSON.parse(localStorage.getItem("materials")) || defaultMaterials;
+// MATERIALS
+let materials = JSON.parse(localStorage.getItem("materials")) || [
+  {name:"Cement", company:"UltraTech", price:350, qty:100}
+];
 
 let total = 0;
 
 // LOAD MATERIALS
 function loadMaterials(){
   material.innerHTML = "";
+  matList.innerHTML = "";
 
   materials.forEach((m,i)=>{
     let opt = document.createElement("option");
-    let companyText = m.company ? " - " + m.company : "";
     opt.value = i;
-    opt.text = `${m.name}${companyText} (₹${m.price})`;
+    opt.text = `${m.name}${m.company ? " - "+m.company : ""} (₹${m.price})`;
     material.appendChild(opt);
+
+    let div = document.createElement("div");
+    div.innerHTML = `
+      ${m.name} - ₹${m.price}
+      <button onclick="deleteMaterial(${i})">Delete</button>
+    `;
+    matList.appendChild(div);
   });
+
+  localStorage.setItem("materials", JSON.stringify(materials));
 }
 
 loadMaterials();
@@ -201,20 +202,26 @@ function addMaterial(){
   let name = matName.value.trim();
   let company = matCompany.value.trim();
   let price = parseFloat(matPrice.value);
+  let qty = matQty.value;
 
   if(!name || !price){
     alert("Enter material and price");
     return;
   }
 
-  materials.push({name, company, price});
-  localStorage.setItem("materials", JSON.stringify(materials));
-
+  materials.push({name, company, price, qty});
   loadMaterials();
 
   matName.value="";
   matCompany.value="";
   matPrice.value="";
+  matQty.value="";
+}
+
+// DELETE MATERIAL
+function deleteMaterial(i){
+  materials.splice(i,1);
+  loadMaterials();
 }
 
 // ADD ITEM
@@ -231,27 +238,46 @@ function addItem(){
   total += t;
 
   let row = billTable.insertRow();
-  row.insertCell(0).innerText = m.name + (m.company ? " ("+m.company+")" : "");
+  row.insertCell(0).innerText = m.name;
   row.insertCell(1).innerText = q;
   row.insertCell(2).innerText = m.price;
   row.insertCell(3).innerText = t;
 
+  let del = row.insertCell(4);
+  del.innerHTML = `<button onclick="removeRow(this,${t})">X</button>`;
+
   grandTotal.innerText = "Total: ₹" + total;
 
-  qty.value="";
+  showCustomer();
+}
+
+// REMOVE ITEM
+function removeRow(btn,val){
+  btn.parentElement.parentElement.remove();
+  total -= val;
+  grandTotal.innerText = "Total: ₹" + total;
+}
+
+// CUSTOMER DISPLAY
+function showCustomer(){
+  let name = custName.value;
+  let mob = custMob.value;
+
+  custDisplay.innerHTML = `
+    ${name ? "Name: "+name+"<br>" : ""}
+    ${mob ? "Mobile: "+mob : ""}
+  `;
 }
 
 // CLEAR BILL
 function clearBill(){
   billTable.innerHTML = `
   <tr>
-    <th>Material</th>
-    <th>Qty</th>
-    <th>Price</th>
-    <th>Total</th>
+  <th>Item</th><th>Qty</th><th>Price</th><th>Total</th><th class="no-print">X</th>
   </tr>`;
   total = 0;
   grandTotal.innerText = "Total: ₹0";
+  custDisplay.innerHTML="";
 }
 
 </script>
