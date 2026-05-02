@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Civil Material Bill Maker</title>
+<title>EASY BILL</title>
 
 <style>
 body {
@@ -61,14 +61,6 @@ th, td {
   text-align: center;
 }
 
-h2, h3 {
-  margin-top: 0;
-}
-
-.hidden {
-  display: none;
-}
-
 .flex {
   display: flex;
   flex-wrap: wrap;
@@ -78,40 +70,47 @@ h2, h3 {
   flex: 1;
   min-width: 150px;
 }
+
+.no-print {
+  display: block;
+}
+
+/* PRINT */
+@media print {
+  .no-print {
+    display: none;
+  }
+  body {
+    background: white;
+  }
+}
 </style>
 
 </head>
 
 <body>
 
-<div class="header">
-<h2>🏗 Civil Material Bill Maker</h2>
+<div class="header no-print">
+<h2 id="shopNameTop">EASY BILL</h2>
+<button onclick="changeShopName()">Change Shop Name</button>
 </div>
 
 <div class="container">
 
-<!-- LOGIN -->
-<div id="loginBox" class="card">
-<h3>Login</h3>
-<input id="username" placeholder="Username">
-<input id="password" type="password" placeholder="Password">
-<button onclick="login()">Enter</button>
+<!-- BILL HEADER -->
+<div class="card">
+<h2 id="shopNameBill" style="text-align:center;"></h2>
+<h3 style="text-align:center;">EASY BILL</h3>
 </div>
-
-<!-- APP -->
-<div id="app" class="hidden">
 
 <!-- CUSTOMER -->
-<div class="card">
-<h3>Customer Details</h3>
+<div class="card no-print">
 <input id="custName" placeholder="Customer Name">
 <input id="custMob" placeholder="Mobile Number">
-<input type="date" id="date">
 </div>
 
-<!-- BILL INPUT -->
-<div class="card">
-<h3>Add Item</h3>
+<!-- ADD ITEM -->
+<div class="card no-print">
 <div class="flex">
 <select id="material"></select>
 <input id="qty" type="number" placeholder="Quantity">
@@ -119,9 +118,8 @@ h2, h3 {
 </div>
 </div>
 
-<!-- BILL TABLE -->
+<!-- BILL -->
 <div class="card">
-<h3>Bill</h3>
 <table id="billTable">
 <tr>
 <th>Material</th>
@@ -133,68 +131,55 @@ h2, h3 {
 
 <h3 id="grandTotal">Total: ₹0</h3>
 
-<button onclick="window.print()">🖨 Print Bill</button>
-<button onclick="clearBill()">🧹 New Bill</button>
+<button class="no-print" onclick="window.print()">🖨 Print</button>
+<button class="no-print" onclick="clearBill()">New Bill</button>
 </div>
 
 <!-- ADD MATERIAL -->
-<div class="card">
+<div class="card no-print">
 <h3>Add Material</h3>
 
 <input id="matName" placeholder="Material Name">
 <input id="matCompany" placeholder="Company (Optional)">
 <input id="matPrice" type="number" placeholder="Price">
-<input id="matStock" type="number" placeholder="Stock Quantity">
 
-<button onclick="addMaterial()">Add Material</button>
-</div>
-
+<button onclick="addMaterial()">Add</button>
 </div>
 
 </div>
 
 <script>
 
-// DEFAULT MATERIALS
+// SHOP NAME SYSTEM
+let shopName = localStorage.getItem("shopName");
+
+if(!shopName){
+  shopName = prompt("Enter your Shop Name:");
+  localStorage.setItem("shopName", shopName);
+}
+
+document.getElementById("shopNameTop").innerText = shopName;
+document.getElementById("shopNameBill").innerText = shopName;
+
+function changeShopName(){
+  let newName = prompt("Enter new Shop Name:");
+  if(newName){
+    localStorage.setItem("shopName", newName);
+    location.reload();
+  }
+}
+
+// MATERIALS
 let defaultMaterials = [
-  {name:"Cement", company:"UltraTech", price:350, stock:100},
-  {name:"Sand", company:"", price:5000, stock:50},
-  {name:"Aggregate", company:"", price:4000, stock:40},
-  {name:"Steel", company:"TATA", price:70, stock:200}
+  {name:"Cement", company:"UltraTech", price:350},
+  {name:"Sand", company:"", price:5000},
+  {name:"Aggregate", company:"", price:4000},
+  {name:"Steel", company:"TATA", price:70}
 ];
 
 let materials = JSON.parse(localStorage.getItem("materials")) || defaultMaterials;
+
 let total = 0;
-
-// LOGIN
-function login(){
-  let u = username.value.trim();
-  let p = password.value.trim();
-
-  if(!u || !p){
-    alert("Enter details");
-    return;
-  }
-
-  localStorage.setItem("user", JSON.stringify({u,p}));
-  localStorage.setItem("isLoggedIn", "true");
-
-  showApp();
-}
-
-// SHOW APP
-function showApp(){
-  loginBox.style.display = "none";
-  app.style.display = "block";
-  loadMaterials();
-}
-
-// AUTO LOGIN
-window.onload = function(){
-  if(localStorage.getItem("isLoggedIn") === "true"){
-    showApp();
-  }
-};
 
 // LOAD MATERIALS
 function loadMaterials(){
@@ -202,29 +187,27 @@ function loadMaterials(){
 
   materials.forEach((m,i)=>{
     let opt = document.createElement("option");
-
     let companyText = m.company ? " - " + m.company : "";
-
     opt.value = i;
-    opt.text = `${m.name}${companyText} (₹${m.price}) [Stock: ${m.stock}]`;
-
+    opt.text = `${m.name}${companyText} (₹${m.price})`;
     material.appendChild(opt);
   });
 }
+
+loadMaterials();
 
 // ADD MATERIAL
 function addMaterial(){
   let name = matName.value.trim();
   let company = matCompany.value.trim();
   let price = parseFloat(matPrice.value);
-  let stock = parseFloat(matStock.value);
 
-  if(!name || !price || !stock){
-    alert("Enter name, price and stock");
+  if(!name || !price){
+    alert("Enter material and price");
     return;
   }
 
-  materials.push({name, company, price, stock});
+  materials.push({name, company, price});
   localStorage.setItem("materials", JSON.stringify(materials));
 
   loadMaterials();
@@ -232,7 +215,6 @@ function addMaterial(){
   matName.value="";
   matCompany.value="";
   matPrice.value="";
-  matStock.value="";
 }
 
 // ADD ITEM
@@ -245,16 +227,8 @@ function addItem(){
     return;
   }
 
-  if(q > m.stock){
-    alert("Not enough stock!");
-    return;
-  }
-
   let t = q * m.price;
   total += t;
-
-  m.stock -= q;
-  localStorage.setItem("materials", JSON.stringify(materials));
 
   let row = billTable.insertRow();
   row.insertCell(0).innerText = m.name + (m.company ? " ("+m.company+")" : "");
@@ -264,14 +238,12 @@ function addItem(){
 
   grandTotal.innerText = "Total: ₹" + total;
 
-  qty.value = "";
-  loadMaterials();
+  qty.value="";
 }
 
 // CLEAR BILL
 function clearBill(){
-  let table = document.getElementById("billTable");
-  table.innerHTML = `
+  billTable.innerHTML = `
   <tr>
     <th>Material</th>
     <th>Qty</th>
