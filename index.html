@@ -52,10 +52,51 @@ button { background:#0d6efd; color:white; border:none; }
   background:white; padding:20px; border-radius:10px;
 }
 
+/* PRINT */
 @media print {
   .no-print, .print-popup { display:none !important; }
   table th:last-child, table td:last-child { display:none; }
-  body.thermal { width:80mm; }
+
+  body.thermal {
+    width:80mm;
+    margin:0;
+  }
+
+  /* 🔥 THERMAL FIX */
+  body.thermal .bill-box {
+    padding:5px;
+    border:none;
+  }
+
+  body.thermal table {
+    width:100%;
+    table-layout:fixed;
+  }
+
+  body.thermal th,
+  body.thermal td {
+    font-size:10px;
+    padding:2px;
+    word-wrap:break-word;
+  }
+
+  body.thermal th:nth-child(1),
+  body.thermal td:nth-child(1) { width:25%; }
+
+  body.thermal th:nth-child(2),
+  body.thermal td:nth-child(2) { width:15%; }
+
+  body.thermal th:nth-child(3),
+  body.thermal td:nth-child(3) { width:10%; }
+
+  body.thermal th:nth-child(4),
+  body.thermal td:nth-child(4) { width:15%; }
+
+  body.thermal th:nth-child(5),
+  body.thermal td:nth-child(5) { width:10%; }
+
+  body.thermal th:nth-child(6),
+  body.thermal td:nth-child(6) { width:25%; }
 }
 </style>
 </head>
@@ -233,7 +274,7 @@ function addItem(){
 
   let r=billTable.insertRow();
   r.insertCell(0).innerText=m.name;
-  r.insertCell(1).innerText = (m.weight && m.weight.trim() !== "") ? m.weight : "-";
+  r.insertCell(1).innerText=(m.weight && m.weight.trim()!=="")?m.weight:"-";
   r.insertCell(2).innerText=q;
   r.insertCell(3).innerText=price;
   r.insertCell(4).innerText=gst>0?gst+"%":"";
